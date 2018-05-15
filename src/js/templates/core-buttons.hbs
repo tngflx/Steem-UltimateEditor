@@ -1,0 +1,8 @@
+<div class="ultimate-insert-buttons" contenteditable="false" style="display: none">
+    <button class="ultimate-insert-buttons-show" type="button"><span>+</span></button>
+    <ul class="ultimate-insert-buttons-addons" style="display: none">
+        {{#each addons}}
+            <li><button data-addon="{{@key}}" data-action="add" class="ultimate-insert-action" type="button">{{{label}}}</button></li>
+        {{/each}}
+    </ul>
+</div>

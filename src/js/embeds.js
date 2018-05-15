@@ -1,0 +1,750 @@
+; (function ($, window, document, undefined) {
+
+    'use strict';
+
+    /** Default values */
+    var pluginName = 'ultimateInsert',
+        addonName = 'Embeds', // first char is uppercase
+        defaults = {
+            label: '<span class="fa fa-youtube-play"></span>',
+            placeholder: 'Paste a YouTube, Vimeo, Facebook, Twitter or Instagram link and press Enter',
+            oembedProxy: 'http://ultimate.iframe.ly/api/oembed?iframe=1',
+            captions: true,
+            captionPlaceholder: 'Type caption (optional)',
+            storeMeta: false,
+            styles: {
+                wide: {
+                    label: '<span class="fa fa-align-justify"></span>'
+                    // added: function ($el) {},
+                    // removed: function ($el) {}
+                },
+                left: {
+                    label: '<span class="fa fa-align-left"></span>'
+                    // added: function ($el) {},
+                    // removed: function ($el) {}
+                },
+                right: {
+                    label: '<span class="fa fa-align-right"></span>'
+                    // added: function ($el) {},
+                    // removed: function ($el) {}
+                }
+            },
+            actions: {
+                remove: {
+                    label: '<span class="fa fa-times"></span>',
+                    clicked: function () {
+                        var $event = $.Event('keydown');
+
+                        $event.which = 8;
+                        $(document).trigger($event);
+                    }
+                }
+            },
+            parseOnPaste: false
+        };
+
+    /**
+     * Embeds object
+     *
+     * Sets options, variables and calls init() function
+     *
+     * @constructor
+     * @param {DOM} el - DOM element to init the plugin on
+     * @param {object} options - Options to override defaults
+     * @return {void}
+     */
+
+    function Embeds(el, options) {
+        this.el = el;
+        this.$el = $(el);
+        this.templates = window.ultimateInsert.Templates;
+        this.core = this.$el.data('plugin_' + pluginName);
+
+        this.options = $.extend(true, {}, defaults, options);
+
+        this._defaults = defaults;
+        this._name = pluginName;
+
+        // Extend editor's functions
+        if (this.core.getEditor()) {
+            this.core.getEditor()._serializePreEmbeds = this.core.getEditor().serialize;
+            this.core.getEditor().serialize = this.editorSerialize;
+        }
+
+        this.init();
+    }
+
+    /**
+     * Initialization
+     *
+     * @return {void}
+     */
+
+    Embeds.prototype.init = function () {
+        var $embeds = this.$el.find('.ultimate-insert-embeds');
+
+        $embeds.attr('contenteditable', false);
+        $embeds.each(function () {
+            if ($(this).find('.ultimate-insert-embeds-overlay').length === 0) {
+                $(this).append($('<div />').addClass('ultimate-insert-embeds-overlay'));
+            }
+        });
+
+        this.events();
+        this.backwardsCompatibility();
+    };
+
+    /**
+     * Event listeners
+     *
+     * @return {void}
+     */
+
+    Embeds.prototype.events = function () {
+        $(document)
+            .on('click', $.proxy(this, 'unselectEmbed'))
+            .on('keydown', $.proxy(this, 'removeEmbed'))
+            .on('click', '.ultimate-insert-embeds-toolbar .ultimate-editor-action', $.proxy(this, 'toolbarAction'))
+            .on('click', '.ultimate-insert-embeds-toolbar2 .ultimate-editor-action', $.proxy(this, 'toolbar2Action'));
+
+        this.$el
+            .on('keyup click paste', $.proxy(this, 'togglePlaceholder'))
+            .on('keydown', $.proxy(this, 'processLink'))
+            .on('click', '.ultimate-insert-embeds-overlay', $.proxy(this, 'selectEmbed'))
+            .on('contextmenu', '.ultimate-insert-embeds-placeholder', $.proxy(this, 'fixRightClickOnPlaceholder'));
+
+        if (this.options.parseOnPaste) {
+            this.$el
+                .on('paste', $.proxy(this, 'processPasted'));
+        }
+
+        $(window)
+            .on('resize', $.proxy(this, 'autoRepositionToolbars'));
+    };
+
+    /**
+     * Replace v0.* class names with new ones, wrap embedded content to new structure
+     *
+     * @return {void}
+     */
+
+    Embeds.prototype.backwardsCompatibility = function () {
+        var that = this;
+
+        this.$el.find('.ultimateInsert-embeds')
+            .removeClass('ultimateInsert-embeds')
+            .addClass('ultimate-insert-embeds');
+
+        this.$el.find('.ultimate-insert-embeds').each(function () {
+            if ($(this).find('.ultimate-insert-embed').length === 0) {
+                $(this).after(that.templates['src/js/templates/embeds-wrapper.hbs']({
+                    html: $(this).html()
+                }));
+                $(this).remove();
+            }
+        });
+    };
+
+    /**
+     * Extend editor's serialize function
+     *
+     * @return {object} Serialized data
+     */
+
+    Embeds.prototype.editorSerialize = function () {
+        var data = this._serializePreEmbeds();
+
+        $.each(data, function (key) {
+            var $data = $('<div />').html(data[key].value),
+                $embeds = $data.find('.ultimate-insert-embeds');
+
+            $embeds.removeAttr('contenteditable');
+            $embeds.find('figcaption').removeAttr('contenteditable');
+            $data.find('.ultimate-insert-embeds-overlay').remove();
+
+            data[key].value = $data.html();
+        });
+
+        return data;
+    };
+
+    /**
+     * Add embedded element
+     *
+     * @return {void}
+     */
+
+    Embeds.prototype.add = function () {
+        var $place = this.$el.find('.ultimate-insert-active');
+
+        // Fix #132
+        // Make sure that the content of the paragraph is empty and <br> is wrapped in <p></p> to avoid Firefox problems
+        $place.html(this.templates['src/js/templates/core-empty-line.hbs']().trim());
+
+        // Replace paragraph with div to prevent #124 issue with pasting in Chrome,
+        // because ultimate editor wraps inserted content into paragraph and paragraphs can't be nested
+        if ($place.is('p')) {
+            $place.replaceWith('<div class="ultimate-insert-active">' + $place.html() + '</div>');
+            $place = this.$el.find('.ultimate-insert-active');
+            this.core.moveCaret($place);
+        }
+
+        $place.addClass('ultimate-insert-embeds ultimate-insert-embeds-input ultimate-insert-embeds-active');
+
+        this.togglePlaceholder({ target: $place.get(0) });
+
+        $place.click();
+        this.core.hideButtons();
+    };
+
+    /**
+     * Toggles placeholder
+     *
+     * @param {Event} e
+     * @return {void}
+     */
+
+    Embeds.prototype.togglePlaceholder = function (e) {
+        var $place = $(e.target),
+            selection = window.getSelection(),
+            range, $current, text;
+
+        if (!selection || selection.rangeCount === 0) {
+            return;
+        }
+
+        range = selection.getRangeAt(0);
+        $current = $(range.commonAncestorContainer);
+
+        if ($current.hasClass('ultimate-insert-embeds-active')) {
+            $place = $current;
+        } else if ($current.closest('.ultimate-insert-embeds-active').length) {
+            $place = $current.closest('.ultimate-insert-embeds-active');
+        }
+
+        if ($place.hasClass('ultimate-insert-embeds-active')) {
+
+            text = $place.text().trim();
+
+            if (text === '' && $place.hasClass('ultimate-insert-embeds-placeholder') === false) {
+                $place
+                    .addClass('ultimate-insert-embeds-placeholder')
+                    .attr('data-placeholder', this.options.placeholder);
+            } else if (text !== '' && $place.hasClass('ultimate-insert-embeds-placeholder')) {
+                $place
+                    .removeClass('ultimate-insert-embeds-placeholder')
+                    .removeAttr('data-placeholder');
+            }
+
+        } else {
+            this.$el.find('.ultimate-insert-embeds-active').remove();
+        }
+    };
+
+    /**
+     * Right click on placeholder in Chrome selects whole line. Fix this by placing caret at the end of line
+     *
+     * @param {Event} e
+     * @return {void}
+     */
+
+    Embeds.prototype.fixRightClickOnPlaceholder = function (e) {
+        this.core.moveCaret($(e.target));
+    };
+
+    /**
+     * Process link
+     *
+     * @param {Event} e
+     * @return {void}
+     */
+
+    Embeds.prototype.processLink = function (e) {
+        var $place = this.$el.find('.ultimate-insert-embeds-active'),
+            url;
+
+        if (!$place.length) {
+            return;
+        }
+
+        url = $place.text().trim();
+
+        // Return empty placeholder on backspace, delete or enter
+        if (url === '' && [8, 46, 13].indexOf(e.which) !== -1) {
+            $place.remove();
+            return;
+        }
+
+        if (e.which === 13) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (this.options.oembedProxy) {
+                this.oembed(url);
+            } else {
+                this.parseUrl(url);
+            }
+        }
+    };
+
+    /**
+     * Process Pasted
+     *
+     * @param {Event} e
+     * @return {void}
+     */
+
+    Embeds.prototype.processPasted = function (e) {
+        var pastedUrl, linkRegEx;
+        if ($(".ultimate-insert-embeds-active").length) {
+            return;
+        }
+
+        pastedUrl = e.originalEvent.clipboardData.getData('text');
+        linkRegEx = new RegExp('^(http(s?):)?\/\/','i');
+        if (linkRegEx.test(pastedUrl)) {
+            if (this.options.oembedProxy) {
+                this.oembed(pastedUrl, true);
+            } else {
+                this.parseUrl(pastedUrl, true);
+            }
+        }
+    };
+
+    /**
+     * Get HTML via oEmbed proxy
+     *
+     * @param {string} url
+     * @return {void}
+     */
+
+    Embeds.prototype.oembed = function (url, pasted) {
+        var that = this;
+
+        $.support.cors = true;
+
+        $.ajax({
+            crossDomain: true,
+            cache: false,
+            url: this.options.oembedProxy,
+            dataType: 'json',
+            data: {
+                url: url
+            },
+            success: function (data) {
+                var html = data && data.html;
+
+                if (that.options.storeMeta) {
+                    html += '<div class="ultimate-insert-embeds-meta"><script type="text/json">' + JSON.stringify(data) + '</script></div>';
+                }
+
+                if (data && !html && data.type === 'photo' && data.url) {
+                    html = '<img src="' + data.url + '" alt="">';
+                }
+
+                if (!html) {
+                    // Prevent render empty embed.
+                    $.proxy(that, 'convertBadEmbed', url)();
+                    return;
+                }
+
+                if (pasted) {
+                    $.proxy(that, 'embed', html, url)();
+                } else {
+                    $.proxy(that, 'embed', html)();
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                var responseJSON = (function () {
+                    try {
+                        return JSON.parse(jqXHR.responseText);
+                    } catch (e) { }
+                })();
+
+                if (typeof window.console !== 'undefined') {
+                    window.console.log((responseJSON && responseJSON.error) || jqXHR.status || errorThrown.message);
+                } else {
+                    window.alert('Error requesting media from ' + that.options.oembedProxy + ' to insert: ' + errorThrown + ' (response status: ' + jqXHR.status + ')');
+                }
+
+                $.proxy(that, 'convertBadEmbed', url)();
+            }
+        });
+    };
+
+    /**
+     * Get HTML using regexp
+     *
+     * @param {string} url
+     * @param {bool} pasted
+     * @return {void}
+     */
+
+    Embeds.prototype.parseUrl = function (url, pasted) {
+        var html;
+
+        if (!(new RegExp(['youtube', 'youtu.be', 'vimeo', 'instagram', 'twitter', 'facebook'].join('|')).test(url))) {
+            $.proxy(this, 'convertBadEmbed', url)();
+            return false;
+        }
+
+        html = url.replace(/\n?/g, '')
+            .replace(/^((http(s)?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|v\/)?)([a-zA-Z0-9\-_]+)(.*)?$/, '<div class="video video-youtube"><iframe width="420" height="315" src="//www.youtube.com/embed/$7" frameborder="0" allowfullscreen></iframe></div>')
+            .replace(/^https?:\/\/vimeo\.com(\/.+)?\/([0-9]+)$/, '<div class="video video-vimeo"><iframe src="//player.vimeo.com/video/$2" width="500" height="281" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe></div>')
+            .replace(/^https:\/\/twitter\.com\/(\w+)\/status\/(\d+)\/?$/, '<blockquote class="twitter-tweet" align="center" lang="en"><a href="https://twitter.com/$1/statuses/$2"></a></blockquote><script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>')
+            .replace(/^(https:\/\/www\.facebook\.com\/(.*))$/, '<script src="//connect.facebook.net/en_US/sdk.js#xfbml=1&amp;version=v2.2" async></script><div class="fb-post" data-href="$1"><div class="fb-xfbml-parse-ignore"><a href="$1">Loading Facebook post...</a></div></div>')
+            .replace(/^https?:\/\/instagram\.com\/p\/(.+)\/?$/, '<span class="instagram"><iframe src="//instagram.com/p/$1/embed/" width="612" height="710" frameborder="0" scrolling="no" allowtransparency="true"></iframe></span>');
+
+        if (this.options.storeMeta) {
+            html += '<div class="ultimate-insert-embeds-meta"><script type="text/json">' + JSON.stringify({}) + '</script></div>';
+        }
+
+        if ((/<("[^"]*"|'[^']*'|[^'">])*>/).test(html) === false) {
+            $.proxy(this, 'convertBadEmbed', url)();
+            return false;
+        }
+
+        if (pasted) {
+            this.embed(html, url);
+        } else {
+            this.embed(html);
+        }
+    };
+
+    /**
+     * Add html to page
+     *
+     * @param {string} html
+     * @param {string} pastedUrl
+     * @return {void}
+     */
+
+    Embeds.prototype.embed = function (html, pastedUrl) {
+        var $place = this.$el.find('.ultimate-insert-embeds-active'),
+            $div;
+
+        if (!html) {
+            alert('Incorrect URL format specified');
+            return false;
+        } else {
+            if (html.indexOf('</script>') > -1) {
+                // Store embed code with <script> tag inside wrapper attribute value.
+                // Make nice attribute value escaping using jQuery.
+                $div = $('<div>')
+                    .attr('data-embed-code', $('<div />').text(html).html())
+                    .html(html);
+                html = $('<div>').append($div).html();
+            }
+
+            if (pastedUrl) {
+                // Get the element with the pasted url
+                // place the embed template and remove the pasted text
+                $place = this.$el.find(":not(iframe, script, style)")
+                    .contents().filter(
+                        function () {
+                            return this.nodeType === 3 && this.textContent.indexOf(pastedUrl) > -1;
+                        }).parent();
+
+                $place.after(this.templates['src/js/templates/embeds-wrapper.hbs']({
+                    html: html
+                }));
+                $place.text($place.text().replace(pastedUrl, ''));
+            } else {
+                $place.after(this.templates['src/js/templates/embeds-wrapper.hbs']({
+                    html: html
+                }));
+                $place.remove();
+            }
+
+
+            this.core.triggerInput();
+
+            if (html.indexOf('facebook') !== -1) {
+                if (typeof (FB) !== 'undefined') {
+                    setTimeout(function () {
+                        FB.XFBML.parse();
+                    }, 2000);
+                }
+            }
+        }
+    };
+
+    /**
+     * Convert bad oEmbed content to an actual line.
+     * Instead of displaying the error message we convert the bad embed
+     *
+     * @param {string} content Bad content
+     *
+     * @return {void}
+     */
+    Embeds.prototype.convertBadEmbed = function (content) {
+        var $place, $empty, $content,
+            emptyTemplate = this.templates['src/js/templates/core-empty-line.hbs']().trim();
+
+        $place = this.$el.find('.ultimate-insert-embeds-active');
+
+        // convert embed node to an empty node and insert the bad embed inside
+        $content = $(emptyTemplate);
+        $place.before($content);
+        $place.remove();
+        $content.html(content);
+
+        // add an new empty node right after to simulate Enter press
+        $empty = $(emptyTemplate);
+        $content.after($empty);
+
+        this.core.triggerInput();
+
+        this.core.moveCaret($empty);
+    };
+
+    /**
+     * Select clicked embed
+     *
+     * @param {Event} e
+     * @returns {void}
+     */
+
+    Embeds.prototype.selectEmbed = function (e) {
+        var that = this,
+            $embed;
+        if (this.core.options.enabled) {
+            $embed = $(e.target).hasClass('ultimate-insert-embeds') ? $(e.target) : $(e.target).closest('.ultimate-insert-embeds');
+
+            $embed.addClass('ultimate-insert-embeds-selected');
+
+            setTimeout(function () {
+                that.addToolbar();
+
+                if (that.options.captions) {
+                    that.core.addCaption($embed.find('figure'), that.options.captionPlaceholder);
+                }
+            }, 50);
+        }
+    };
+
+    /**
+     * Unselect selected embed
+     *
+     * @param {Event} e
+     * @returns {void}
+     */
+
+    Embeds.prototype.unselectEmbed = function (e) {
+        var $el = $(e.target).hasClass('ultimate-insert-embeds') ? $(e.target) : $(e.target).closest('.ultimate-insert-embeds'),
+            $embed = this.$el.find('.ultimate-insert-embeds-selected');
+
+        if ($el.hasClass('ultimate-insert-embeds-selected')) {
+            $embed.not($el).removeClass('ultimate-insert-embeds-selected');
+            $('.ultimate-insert-embeds-toolbar, .ultimate-insert-embeds-toolbar2').remove();
+            this.core.removeCaptions($el.find('figcaption'));
+
+            if ($(e.target).is('.ultimate-insert-caption-placeholder') || $(e.target).is('figcaption')) {
+                $el.removeClass('ultimate-insert-embeds-selected');
+                this.core.removeCaptionPlaceholder($el.find('figure'));
+            }
+            return;
+        }
+
+        $embed.removeClass('ultimate-insert-embeds-selected');
+        $('.ultimate-insert-embeds-toolbar, .ultimate-insert-embeds-toolbar2').remove();
+
+        if ($(e.target).is('.ultimate-insert-caption-placeholder')) {
+            this.core.removeCaptionPlaceholder($el.find('figure'));
+        } else if ($(e.target).is('figcaption') === false) {
+            this.core.removeCaptions();
+        }
+    };
+
+    /**
+     * Remove embed
+     *
+     * @param {Event} e
+     * @returns {void}
+     */
+
+    Embeds.prototype.removeEmbed = function (e) {
+        var $embed, $empty;
+
+        if (e.which === 8 || e.which === 46) {
+            $embed = this.$el.find('.ultimate-insert-embeds-selected');
+
+            if ($embed.length) {
+                e.preventDefault();
+
+                $('.ultimate-insert-embeds-toolbar, .ultimate-insert-embeds-toolbar2').remove();
+
+                $empty = $(this.templates['src/js/templates/core-empty-line.hbs']().trim());
+                $embed.before($empty);
+                $embed.remove();
+
+                // Hide addons
+                this.core.hideAddons();
+
+                this.core.moveCaret($empty);
+                this.core.triggerInput();
+            }
+        }
+    };
+
+    /**
+     * Adds embed toolbar to editor
+     *
+     * @returns {void}
+     */
+
+    Embeds.prototype.addToolbar = function () {
+        var $embed = this.$el.find('.ultimate-insert-embeds-selected'),
+            active = false,
+            $toolbar, $toolbar2, ultimateEditor, toolbarContainer;
+
+        if ($embed.length === 0) {
+            return;
+        }
+
+        ultimateEditor = this.core.getEditor();
+        toolbarContainer = ultimateEditor.options.elementsContainer || 'body';
+
+        $(toolbarContainer).append(this.templates['src/js/templates/embeds-toolbar.hbs']({
+            styles: this.options.styles,
+            actions: this.options.actions
+        }).trim());
+
+        $toolbar = $('.ultimate-insert-embeds-toolbar');
+        $toolbar2 = $('.ultimate-insert-embeds-toolbar2');
+
+        $toolbar.find('button').each(function () {
+            if ($embed.hasClass('ultimate-insert-embeds-' + $(this).data('action'))) {
+                $(this).addClass('ultimate-editor-button-active');
+                active = true;
+            }
+        });
+
+        if (active === false) {
+            $toolbar.find('button').first().addClass('ultimate-editor-button-active');
+        }
+
+        this.repositionToolbars();
+        $toolbar.fadeIn();
+        $toolbar2.fadeIn();
+    };
+
+    Embeds.prototype.autoRepositionToolbars = function () {
+        setTimeout(function () {
+            this.repositionToolbars();
+            this.repositionToolbars();
+        }.bind(this), 0);
+    };
+
+    Embeds.prototype.repositionToolbars = function () {
+        var $toolbar = $('.ultimate-insert-embeds-toolbar'),
+            $toolbar2 = $('.ultimate-insert-embeds-toolbar2'),
+            $embed = this.$el.find('.ultimate-insert-embeds-selected'),
+            elementsContainer = this.core.getEditor().options.elementsContainer,
+            elementsContainerAbsolute = ['absolute', 'fixed'].indexOf(window.getComputedStyle(elementsContainer).getPropertyValue('position')) > -1,
+            elementsContainerBoundary = elementsContainerAbsolute ? elementsContainer.getBoundingClientRect() : null,
+            containerWidth = $(window).width(),
+            position = {};
+
+        if ($toolbar2.length) {
+            position.top = $embed.offset().top + 2; // 2px - distance from a border
+            position.left = $embed.offset().left + $embed.width() - $toolbar2.width() - 4; // 4px - distance from a border
+
+            if (elementsContainerAbsolute) {
+                position.top += elementsContainer.scrollTop - elementsContainerBoundary.top;
+                position.left -= elementsContainerBoundary.left;
+                containerWidth = $(elementsContainer).width();
+            }
+
+            if (position.left + $toolbar2.width() > containerWidth) {
+                position.left = containerWidth - $toolbar2.width();
+            }
+
+            $toolbar2.css(position);
+        }
+
+        if ($toolbar.length) {
+            position.left = $embed.offset().left + $embed.width() / 2 - $toolbar.width() / 2;
+            position.top = $embed.offset().top - $toolbar.height() - 8 - 2 - 5; // 8px - hight of an arrow under toolbar, 2px - height of an embed outset, 5px - distance from an embed
+
+            if (elementsContainerAbsolute) {
+                position.top += elementsContainer.scrollTop - elementsContainerBoundary.top;
+                position.left -= elementsContainerBoundary.left;
+            }
+
+            if (position.top < 0) {
+                position.top = 0;
+            }
+
+            $toolbar.css(position);
+        }
+    };
+
+    /**
+     * Fires toolbar action
+     *
+     * @param {Event} e
+     * @returns {void}
+     */
+
+    Embeds.prototype.toolbarAction = function (e) {
+        var $button = $(e.target).is('button') ? $(e.target) : $(e.target).closest('button'),
+            $li = $button.closest('li'),
+            $ul = $li.closest('ul'),
+            $lis = $ul.find('li'),
+            $embed = this.$el.find('.ultimate-insert-embeds-selected'),
+            that = this;
+
+        $button.addClass('ultimate-editor-button-active');
+        $li.siblings().find('.ultimate-editor-button-active').removeClass('ultimate-editor-button-active');
+
+        $lis.find('button').each(function () {
+            var className = 'ultimate-insert-embeds-' + $(this).data('action');
+
+            if ($(this).hasClass('ultimate-editor-button-active')) {
+                $embed.addClass(className);
+
+                if (that.options.styles[$(this).data('action')].added) {
+                    that.options.styles[$(this).data('action')].added($embed);
+                }
+            } else {
+                $embed.removeClass(className);
+
+                if (that.options.styles[$(this).data('action')].removed) {
+                    that.options.styles[$(this).data('action')].removed($embed);
+                }
+            }
+        });
+
+        this.core.triggerInput();
+    };
+
+    /**
+     * Fires toolbar2 action
+     *
+     * @param {Event} e
+     * @returns {void}
+     */
+
+    Embeds.prototype.toolbar2Action = function (e) {
+        var $button = $(e.target).is('button') ? $(e.target) : $(e.target).closest('button'),
+            callback = this.options.actions[$button.data('action')].clicked;
+
+        if (callback) {
+            callback(this.$el.find('.ultimate-insert-embeds-selected'));
+        }
+
+        this.core.triggerInput();
+    };
+
+    /** Plugin initialization */
+
+    $.fn[pluginName + addonName] = function (options) {
+        return this.each(function () {
+            if (!$.data(this, 'plugin_' + pluginName + addonName)) {
+                $.data(this, 'plugin_' + pluginName + addonName, new Embeds(this, options));
+            }
+        });
+    };
+
+})(jQuery, window, document);

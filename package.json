@@ -1,0 +1,52 @@
+{
+  "name": "ultimate-editor-insert-plugin",
+  "version": "0.0.1",
+  "description": "Steem ultimate editor",
+  "main": "dist/js/ultimate-editor-insert-plugin.js",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/orthes/ultimate-editor-insert-plugin.git"
+  },
+  "bugs": {
+    "url":"https://github.com/tngflx/Steem-UltimateEditor"
+  },
+  "author": {
+    "name": "Felix Tang"
+  },
+  "keywords": [
+    "contenteditable",
+    "editor",
+    "ultimate",
+    "wysiwyg",
+    "rich-text",
+    "images",
+    "embeds",
+    "videos"
+  ],
+  "dependencies": {
+    "jquery": ">=1.9.0",
+    "handlebars": "~4.0.0",
+    "blueimp-file-upload": "~9.12.1",
+    "jquery-sortable": "~0.9.12"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.4",
+    "grunt-autoprefixer": "^3.0.1",
+    "grunt-banner": "^0.6.0",
+    "grunt-contrib-concat": "^0.5.1",
+    "grunt-contrib-handlebars": "^0.11.0",
+    "grunt-contrib-jasmine": "^1.1.0",
+    "grunt-contrib-jshint": "~0.11.0",
+    "grunt-contrib-uglify": "~0.9.1",
+    "grunt-contrib-watch": "~0.6.1",
+    "grunt-csso": "^0.7.0",
+    "grunt-jscs": "^2.8.0",
+    "grunt-sass": "~1.1.0",
+    "grunt-template-jasmine-istanbul": "^0.4.0",
+    "jit-grunt": "^0.9.1",
+    "time-grunt": "^1.1.0"
+  },
+  "scripts": {
+  }
+}
