@@ -74,7 +74,13 @@
                 maxFileSizeError: 'This file is too big: '
             }
             // uploadError: function($el, data) {}
-            // uploadCompleted: function ($el, data) {}
+            uploadCompleted: function () {
+                var y = $("img[src*='base64']");
+                if (y.length == 0) {
+                    $('#post').removeAttr('disabled');
+                    $('#post').html('Post to STEEMIT!');
+                }
+            }
         };
 
     /**
@@ -335,6 +341,8 @@
      */
 
     Images.prototype.uploadProgress = function (e, data) {
+        $('#post').attr('disabled', "");
+        $('#post').html("Uploading...");
         var progress, $progressbar;
 
         if (this.options.preview) {
