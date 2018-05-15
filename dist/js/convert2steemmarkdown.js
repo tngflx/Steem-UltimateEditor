@@ -1,5 +1,24 @@
 ﻿var allContents, x, editor;
 
+function savDraft() {
+    var setItem = () => {
+        console.log("saveitem");
+        localStorage.setItem("draft.title", title);
+        localStorage.setItem("draft.body", draft);
+    };
+    window.setInterval(() => { setItem() }, 10000);
+}
+
+//resDraft = localStorage.getItem("draft")
+if (resDraft) {
+    $('#container').html(resDraft);
+}
+
+$("#post").click(function () {
+    Replace(editor);
+
+})
+
 function Replace(editor2) {
     editor2 = editor;
     allContents = editor.serialize();
@@ -10,23 +29,7 @@ function Replace(editor2) {
     direction = "pull-$1";
 
     x = x.replace(reg1, direction);
-    x = x.replace(reg2, "");
     x = x.replace(reg3, "");
-}
-
-function storeBase64Image() {
-    var pics = $(".medium-insert-images img[src*='data']");
-
-    for (var i = 0; i < pics.length; i++) {
-        var a = pics[i].currentSrc,
-            b = a.replace(/data:image.*base64,/, ""),
-            c = a.replace(/,(.*)/, "," + i);
-        localStorage.setItem("Imgdata" + i, b);
-    }
-    alert(c);
-}
-
-function readBase64Image() {
-    var pics = $(".medium-insert-images img[src*='data']");
-
+    x = x.replace(reg2, "");
+    prompt("Just press <Ctrl+C, Enter>, and paste it on your steemit post page. Will integrate direct post to steemit in future", x);
 }
