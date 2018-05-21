@@ -1,9 +1,45 @@
-﻿var allContents, x, editor;
+var allContents, x, editor, Base64, permlink,
+    draft, resDraft, title, tags, FiltrBody, sbd_percent;
 
+updateContent();
+function updateContent() {
+    draft = $('.editable').html().trim();
+    title = $('#title').text().trim();
+    footer = $('footer').html();
+    Base64 = $("img[src*='base64']");
+    tags = $('input[name=tags]').val().match(/\w+|"[^"]+"/g);
+    permlink = title.toLowerCase()
+        .replace(/ /g, '-')
+        .replace(/[^\w-]+/g, '');
+    sbd_percent = ($(".payout").val() == 0) ? 0 : 10000;
+}
+
+
+//Autorun functions
 $("#post").click(function () {
     Replace(editor);
 
 })
+
+if (Base64.length == 0) {
+    window.setInterval(() => { savDraft() }, 5000);
+}
+
+//Check tags field and payout type if it's filled
+function checkDraft() {
+    if (tags === null && title !== '') {
+        alert('Tags field cannot be left blank')
+        return false;
+    } else if (title === '' && tags !== null) {
+        alert('Please specify a title')
+        return false;
+    } else if (tags === null && title == '') {
+        alert('You might as well don\'t make a post. Kidding. Please check your title and tags')
+        return false;
+    } else {
+        return true;
+    }
+}
 
 //Saving to localstorage
 function savDraft() {
