@@ -1,23 +1,53 @@
 ﻿var allContents, x, editor;
 
-function savDraft() {
-    var setItem = () => {
-        console.log("saveitem");
-        localStorage.setItem("draft.title", title);
-        localStorage.setItem("draft.body", draft);
-    };
-    window.setInterval(() => { setItem() }, 10000);
-}
-
-//resDraft = localStorage.getItem("draft")
-if (resDraft) {
-    $('#container').html(resDraft);
-}
-
 $("#post").click(function () {
     Replace(editor);
 
 })
+
+//Saving to localstorage
+function savDraft() {
+    updateContent();
+
+    const data = {
+        author: author,
+        title: title,
+        body: draft,
+        footer: footer,
+        permlink: tags
+    }
+
+    //JSON extension 
+    JSON.extn = {
+
+        format: '\t',
+
+        replacer: function (key, value) {
+            function trim(text) {
+                var rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
+                text = (text == null)
+                    ? ""
+                    : (text + "").replace(rtrim, "");
+                return text;
+            }
+            return typeof this[key] === "string" ? trim(value) : value;
+        },
+        stringify: function (obj, replacer, space) {
+            return JSON.stringify(obj, replacer, space);
+        }, 
+
+        trimedStringify: function (obj) {
+            return this.stringify(obj, this.replacer);
+        },
+    }
+    //Saving data to localstorage
+    localStorage.setItem("draft", JSON.extn.trimedStringify(data, null, 0));
+    //console.log("Saved draft")
+}
+
+function GetDraft() {
+    localStorage.getItem('draft');
+}
 
 function Replace(editor2) {
     editor2 = editor;
