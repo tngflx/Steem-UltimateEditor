@@ -39,3 +39,48 @@ function Replace(editor2) {
         PostBenef();
     }
 }
+
+
+
+function PostBenef() {
+    checkProfile();
+    updateContent();
+
+    var beneficiaries = [];
+    beneficiaries.push({
+        account: '',
+        weight: 100 * 15
+    });
+
+    var operations = [
+        ['comment',
+            {
+                parent_author: '',
+                parent_permlink: tags[0],
+                author: author,
+                permlink: permlink,
+                title: title,
+                body: FiltrBody,
+                json_metadata: JSON.stringify({
+                    tags: tags,
+                    app: 'steemultedt.app'
+                })
+            }
+        ];
+
+    console.log(operations);
+
+    sc2api.broadcast(
+        operations,
+        function (e, r) {
+            if (e) {
+                console.log(e.error, r);
+                if (e.error !== undefined) {
+                    console.log(e);
+                    alert('The request was not succesfull. Please make sure that you logged in via SteemConnect, and then you didn\'t post within the last 5 minutes. If the problem persists please contact @tngflx on Discord. Error msg:' + e.error_description);
+                }
+            } else {
+                alert('Successfully posted on STEEM blockchain!')
+            }
+        });
+}
