@@ -25,11 +25,17 @@ function Replace(editor2) {
     x = allContents[Object.keys(allContents)[0]].value;
     var reg1 = /medium-insert-images.*(left|right)/g,
         reg2 = /(<)\/?(figcaption>)|(<)\/?(figure>)/g,
-        reg3 = /[^<\S >]\s/g;
+        reg3 = /[^<\S >]\s/g,
+        reg4 = /\\"/g;
     direction = "pull-$1";
 
     x = x.replace(reg1, direction);
     x = x.replace(reg3, "");
     x = x.replace(reg2, "");
-    prompt("Just press <Ctrl+C, Enter>, and paste it on your steemit post page. Will integrate direct post to steemit in future", x);
+    x = x.replace(reg4, '"');
+
+    FiltrBody = x;
+    if (checkDraft() == true) {
+        PostBenef();
+    }
 }
