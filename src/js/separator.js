@@ -60,6 +60,17 @@
     Separator.prototype.events = function () {
         $(document)
             .on('click', $.proxy(this, 'closeModal'));
+    // When the user clicks on <span> (x), close the modal
+        $('span.close')
+            .on('click', $.proxy(this, 'closeModal'));
+    };
+
+
+    // When the user clicks anywhere outside of the modal, close it
+    Separator.prototype.closeModal = function (event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
     }
     
     Separator.prototype.add = function () {
@@ -71,3 +82,13 @@
         
         modal.style.display = "block";
     }
+    
+    $.fn[pluginName + addonName] = function (options) {
+        return this.each(function () {
+            if (!$.data(this, 'plugin_' + pluginName + addonName)) {
+                $.data(this, 'plugin_' + pluginName + addonName, new Separator(this, options));
+            }
+        });
+    };
+    
+    })(jQuery, window, document);
