@@ -15,31 +15,67 @@ function updateContent() {
 }
 
 
-//Autorun functions
-$("#post").click(function () {
-    Replace(editor);
-
-})
-
-if (Base64.length == 0) {
-    window.setInterval(() => { savDraft() }, 5000);
+//Restore draft to editable area
+if (resDraft) {
+    //Title restore
+    $('#maintitle').html(resDraft.title);
+    $('.editable').html(resDraft.body);
 }
 
 //Check tags field and payout type if it's filled
 function checkDraft() {
+    $('.bootstrap-tagsinput').on('click', function () {
+        $('.bootstrap-tagsinput').removeClass('warning');
+    });
+
+    $('#title').on('click', function (event) {
+        $('#title').removeClass('warning');
+    });
+
     if (tags === null && title !== '') {
-        alert('Tags field cannot be left blank')
+        alert('Tags field cannot be left blank');
+        $('.bootstrap-tagsinput').addClass('warning');
         return false;
     } else if (title === '' && tags !== null) {
         alert('Please specify a title')
+        $('#title').addClass('warning');
         return false;
     } else if (tags === null && title == '') {
         alert('You might as well don\'t make a post. Kidding. Please check your title and tags')
+        $('.bootstrap-tagsinput').addClass('warning');
+        $('#title').addClass('warning');
         return false;
     } else {
         return true;
     }
 }
+
+Observe();
+function Observe() {
+    // Select the node that will be observed for mutations
+    var targetNode = $('.editable')[0],
+        targetNode2 = $('#maintitle')[0];
+    // Options for the observer (which mutations to observe)
+    var config = { attributes: true, childList: true, subtree: true, characterData: true };
+
+    // Callback function to execute when mutations are observed
+    var callback = function (mutationsList) {
+        savDraft();
+    }
+
+    // Create an observer instance linked to the callback function
+    var observer = new MutationObserver(callback);
+
+    // Start observing the target node for configured mutations
+    $(document).ready(function () {
+        setTimeout(() => bundle(), 2000);
+        function bundle() {
+            observer.observe(targetNode, config);
+            observer.observe(targetNode2, config);
+        }
+    });
+};
+
 
 //Saving to localstorage
 function savDraft() {
