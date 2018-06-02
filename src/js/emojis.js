@@ -83,11 +83,26 @@ function extend(dest, source) {
         }
     }
 
+Emoji = UltimateEditor.extensions.form.extend({
+        name: 'emoji',
+
+        aria: 'insert emoji',
+        action: 'emoji',
+        contentDefault: 'TBL',
+        contentFA: '<i class="fa fa-smile-o"></i>',
+        
+        handleClick: function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            this[this.isActive() === true ? 'hide' : 'show']();
+        },
+
 setBuilder: function () {
             this._range = null;
             
-            var elements = this._doc.getElementsByClassName('medium-editor-emoji-builder-grid');
-            $('.medium-editor-table-builder').attr('style', 'display = "none";');
+            var elements = this._doc.getElementsByClassName('ultimate-editor-emoji-builder-grid');
+            $('.ultiamte-editor-emoji-builder').attr('style', 'display = "none";');
             elements[0].style.display = 'block';
             elements[0].style.backgroundColor = 'black';
             for (var i = 0; i < elements.length; i++) {
@@ -108,3 +123,5 @@ setBuilder: function () {
                 insertHtmlAfterSelection(res, x);
             })
         }
+}
+
