@@ -82,3 +82,29 @@ function extend(dest, source) {
             tagName = el && el.tagName ? el.tagName.toLowerCase() : false;
         }
     }
+
+setBuilder: function () {
+            this._range = null;
+            
+            var elements = this._doc.getElementsByClassName('medium-editor-emoji-builder-grid');
+            $('.medium-editor-table-builder').attr('style', 'display = "none";');
+            elements[0].style.display = 'block';
+            elements[0].style.backgroundColor = 'black';
+            for (var i = 0; i < elements.length; i++) {
+                elements[i].style.height = (COLUMN_WIDTH * this.rows + BORDER_WIDTH * 2) + 'px';
+                elements[i].style.width = (COLUMN_WIDTH * this.columns + BORDER_WIDTH * 2) + 'px';
+            }
+            if ($(".emojislst")[0] === undefined) {
+                var handlebar = window.MediumInsert.Templates['src/js/templates/emojis.hbs']().trim();
+                elements[0].insertAdjacentHTML('beforeend', handlebar);
+                this._onClick();
+            }
+        },
+
+        _onClick: function () {
+            var x = this._doc;
+            $('.emojislst>li').on('click', function (e) {
+                var res = e.target.innerText;
+                insertHtmlAfterSelection(res, x);
+            })
+        }
