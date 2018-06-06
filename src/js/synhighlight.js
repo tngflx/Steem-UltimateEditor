@@ -15,6 +15,26 @@ var syntaxHighlight = MediumEditor.extensions.button.extend({
         this.subscribe('editableKeydownEnter', this.handleParagraph);
         this.subscribe('click', this.wrapCode.bind(this));
     },
+    
+     handleInput: function () {
+        var regex = new RegExp(/\`\`\`(\b[\w]+\b)((.|\n)+)\`\`\`/, 'gm');
+        var mat_code = $('.editable').text().match(regex);
+        if (mat_code) {
+            var code_html = mat_code.toString();
+            const language = RegExp.$1;
+            const codes = RegExp.$2;
+            const replace_text = "<code class=\"" + language + "\">" + "</code>";
+            code_html = code_html.replace(/[\s\S]*/, replace_text);
+            document.getElementsByClassName('editable')[0].innerHTML = document.getElementsByClassName('editable')[0].innerHTML.replace(regex, code_html);
+            document.getElementsByTagName('code')[0].innerText = document.getElementsByTagName('code')[0].innerText.replace(/.*/g, codes);
+            if (document.getElementsByTagName("code")[0].parentNode.nodeName !== 'pre') {
+                $("code").wrap('<pre></pre>');
+                document.getElementsByTagName("code").innerHTML = "<input type='text' />";
+            }
+            this.highSyn();
+        }
+        this.base.saveSelection();
+        this.highSyn();
 
     highSyn: function () {
         hljs.configure({ useBR: false });
