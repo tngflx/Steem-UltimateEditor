@@ -191,6 +191,34 @@ function downloadCanvas(link, canvasId, filename) {
     link.href = document.getElementById(canvasId).toDataURL();
     link.download = filename;
 }
+
+async function uploadIPFS(canvasId) {
+
+    $.ajax({
+        url: 'http://localhost:4000/upload',
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (result) {
+            console.log(result.files[0])
+            const url = result.files[0].url;
+            const filename = result.files[0].name;
+            var index = $('.meme-picker')[0].options.length;
+            $('.meme-picker').append(`<option data-img-src="${url}" data-img-alt="${filename}" value="${index}">${filename}</option>`)
+            $(".meme-picker").data('picker').destroy();
+            $(".meme-picker").imagepicker();
+            $(".meme-picker").data('picker').sync_picker_with_select();
+        },
+        error: function (error) {
+            console.log("Something went wrong!");
+        }
+    })
+    // Form data
+    //var data = document.getElementById(canvasId).toDataURL();
+}
+
+
 document.getElementById('download').addEventListener('click', function () {
     downloadCanvas(this, 'canvas', 'meme.png');
 }, false);
