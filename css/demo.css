@@ -1,3 +1,65 @@
+.hlfind{
+    background-color:yellow;
+}
+
+.medium-editor-toolbar-find-input{
+
+    position: relative;
+    top: -2px;
+    margin: 10px -1px 41px;
+    right: -32px;
+}
+
+.medium-editor-toolbar-replace-input{
+position: absolute;
+    bottom:9px;
+right: 92px;
+    
+z-index: 1;
+}
+
+.fnr-input {
+ background:#000;
+ color:#ccc;
+ height:23px;
+ width:239px;
+ padding-left: 7px;
+ border: 0.1px inset white;
+}
+.fnr-input::-webkit-input-placeholder {
+ color:#f8f5f3;
+ color:rgba(248,245,243,.8)
+}
+.fnr-input:-moz-placeholder {
+ color:#f8f5f3;
+ color:rgba(248,245,243,.8)
+}
+.fnr-input::-moz-placeholder {
+ color:#f8f5f3;
+ color:rgba(248,245,243,.8)
+}
+.fnr-input:-ms-input-placeholder {
+ color:#f8f5f3;
+ color:rgba(248,245,243,.8)
+}
+
+.medium-editor-toolbar-replaceall{
+    position: relative;
+    top: 32px;
+    right:5px;
+}
+
+.medium-editor-toolbar-find{
+    position:relative;
+    right: -39px;
+}
+
+.medium-editor-toolbar-fnr-close{
+    position:relative;
+    right: 15px;
+}
+
+
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 22px;
