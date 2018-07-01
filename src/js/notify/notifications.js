@@ -120,6 +120,18 @@ function renderNotif(notification) {
         const time = epochConv(timestamp);
         const link = 'https://steemit.com';
         updateBadge();
+        
+        $(`#data-${count}`).data({
+                    url: gc_url,
+                    root_permlink: gc_root_permlink,
+                    root_author: gc_root_author,
+                    parent_permlink: gc_parent_permlink,
+                    parent_author: gc_parent_author,
+                    net_votes: gc_net_votes,
+                    depth: gc_depth,
+                    children: gc_children
+                });
+        
         switch (type) {
             case ('reply'):
 
@@ -212,7 +224,7 @@ function renderNotif(notification) {
     }
 }
 
-//
+//https://stackoverflow.com/questions/847185/convert-a-unix-timestamp-to-time-in-javascript
 function epochConv(UNIX_timestamp) {
     var a = new Date(UNIX_timestamp * 1000);
     var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
