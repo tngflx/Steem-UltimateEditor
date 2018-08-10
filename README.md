@@ -6,14 +6,11 @@ The ultimate user friendly editor for steemians! No more markdown to remember or
 ```javascript
 npm install --save
 ```
-
-2) Composer install if you need upload handler for AWS
+2) Open up webpack-dev-server to serve files
 ```javascript
-composer install --save
+npm run dev
 ```
 
-3) Recommend to install XAMPP for PHP upload handler. You might need to host files on server.
-
-4) Open index.html. And voila!
+3) Open index.html. And voila!
 
 <img src="https://steemitimages.com/DQmb4o1dHzre7hpQFp2Rkz93bDgghiiBDWiHQzZd3XLPCWC/ultedtlogosmall.png">
